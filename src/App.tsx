@@ -704,6 +704,7 @@ const POS = () => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isSetup, setIsSetup] = useState<boolean | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -715,10 +716,19 @@ export default function App() {
 
   const checkSetup = async () => {
     try {
+      setSetupError(null);
       const res = await api.get('/setup/status');
       setIsSetup(res.data.isSetup);
-    } catch (err) {
-      console.error('Error checking setup status');
+    } catch (err: any) {
+      const statusCode = err?.response?.status;
+      const errorMessage =
+        statusCode === 404
+          ? 'La API no está disponible en esta URL. En Vercel debes desplegar también el backend.'
+          : 'No se pudo conectar con la API. Revisa variables de entorno y rutas /api.';
+
+      console.error('Error checking setup status', err);
+      setSetupError(errorMessage);
+      setIsSetup(false);
     }
   };
 
@@ -735,6 +745,30 @@ export default function App() {
   };
 
   if (isSetup === false) {
+    if (setupError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+          <div className="w-full max-w-xl bg-white border border-amber-200 rounded-xl p-6 space-y-4">
+            <h2 className="text-xl font-bold text-slate-900">No se pudo iniciar el ERP</h2>
+            <p className="text-slate-600">{setupError}</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700">
+              <p className="font-semibold mb-2">Checklist rápido para Vercel:</p>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Configura <code>DATABASE_URL</code> y <code>JWT_SECRET</code>.</li>
+                <li>Verifica que el backend responda en rutas <code>/api/*</code>.</li>
+                <li>Si frontend y backend están separados, define <code>VITE_API_BASE_URL</code>.</li>
+              </ul>
+            </div>
+            <button
+              onClick={checkSetup}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+            >
+              Reintentar conexión
+            </button>
+          </div>
+        </div>
+      );
+    }
     return <SetupWizard onComplete={() => setIsSetup(true)} />;
   }
 

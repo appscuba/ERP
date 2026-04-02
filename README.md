@@ -118,6 +118,7 @@ ERP fullstack moderno, modular y auditable para inventario, POS, facturación, c
 ```bash
 DATABASE_URL="mysql://root:@localhost:3306/erp_secure"
 JWT_SECRET="cambia-este-secreto-en-produccion"
+VITE_API_BASE_URL="http://localhost:3000/api"
 ```
 
 3. Instalar dependencias y generar Prisma client:
@@ -147,6 +148,7 @@ npm run dev
 3. Variables de entorno en Vercel:
    - `DATABASE_URL` (usar MySQL administrado, ej. PlanetScale/Railway/Aiven)
    - `JWT_SECRET`
+   - `VITE_API_BASE_URL` (si frontend y backend no están en el mismo dominio)
 4. Build command:
 
 ```bash
