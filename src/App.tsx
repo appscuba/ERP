@@ -39,6 +39,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  mustChangePassword?: boolean;
 }
 
 interface Product {
@@ -127,6 +128,83 @@ const Login = ({ onLogin }: { onLogin: (user: User, token: string) => void }) =>
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-100 active:scale-[0.98]"
           >
             Entrar al Sistema
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+const ChangePassword = ({ onComplete }: { onComplete: () => void }) => {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      return setError('Las contraseñas no coinciden');
+    }
+    if (newPassword.length < 6) {
+      return setError('La contraseña debe tener al menos 6 caracteres');
+    }
+    try {
+      await api.post('/auth/change-password', { newPassword });
+      onComplete();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cambiar contraseña');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100"
+      >
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-2xl mb-4 text-orange-600">
+            <AlertCircle size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Cambio de Contraseña Obligatorio</h1>
+          <p className="text-slate-500 mt-2">Por seguridad, debes cambiar tu contraseña en el primer acceso.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Nueva Contraseña</label>
+            <input 
+              type="password" 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Confirmar Nueva Contraseña</label>
+            <input 
+              type="password" 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+          <button 
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg active:scale-[0.98]"
+          >
+            Actualizar y Continuar
           </button>
         </form>
       </motion.div>
@@ -509,6 +587,18 @@ export default function App() {
   };
 
   if (!user) return <Login onLogin={handleLogin} />;
+
+  if (user.mustChangePassword) {
+    return (
+      <ChangePassword 
+        onComplete={() => {
+          const updatedUser = { ...user, mustChangePassword: false };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }} 
+      />
+    );
+  }
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

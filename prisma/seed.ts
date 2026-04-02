@@ -33,6 +33,7 @@ async function main() {
       password: hashedPassword,
       name: 'Super Admin',
       roleId: adminRole.id,
+      mustChangePassword: true,
     },
   });
 

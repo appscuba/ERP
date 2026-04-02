@@ -50,10 +50,43 @@ async function startServer() {
 
       res.json({
         token,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role.name },
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          name: user.name, 
+          role: user.role.name,
+          mustChangePassword: user.mustChangePassword 
+        },
       });
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/auth/change-password', authenticateToken, async (req: AuthRequest, res) => {
+    const { newPassword } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: { 
+          password: hashedPassword,
+          mustChangePassword: false 
+        },
+      });
+
+      await createAuditLog({
+        userId: req.user?.id,
+        action: 'UPDATE',
+        module: 'auth',
+        recordId: req.user?.id,
+        newValues: { mustChangePassword: false },
+        ipAddress: req.ip,
+      });
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating password' });
     }
   });
 
