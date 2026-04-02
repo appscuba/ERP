@@ -16,6 +16,68 @@ async function startServer() {
 
   app.use(express.json());
 
+  // --- Setup Routes ---
+  app.get('/api/setup/status', async (req, res) => {
+    try {
+      const userCount = await prisma.user.count();
+      res.json({ isSetup: userCount > 0 });
+    } catch (error) {
+      res.status(500).json({ message: 'Error checking setup status' });
+    }
+  });
+
+  app.post('/api/setup/init', async (req, res) => {
+    const { email, password, name } = req.body;
+    try {
+      const userCount = await prisma.user.count();
+      if (userCount > 0) {
+        return res.status(400).json({ message: 'System already setup' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create initial data
+      const adminRole = await prisma.role.upsert({
+        where: { name: 'ADMIN' },
+        update: {},
+        create: { name: 'ADMIN' },
+      });
+
+      await prisma.role.upsert({
+        where: { name: 'CAJERO' },
+        update: {},
+        create: { name: 'CAJERO' },
+      });
+
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          roleId: adminRole.id,
+          mustChangePassword: false,
+        },
+        include: { role: true }
+      });
+
+      await prisma.category.create({ data: { name: 'General' } });
+
+      await createAuditLog({
+        userId: user.id,
+        action: 'CREATE',
+        module: 'setup',
+        recordId: user.id,
+        newValues: { email, name, role: 'ADMIN' },
+        ipAddress: req.ip,
+      });
+
+      res.json({ message: 'Setup completed successfully' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error during setup' });
+    }
+  });
+
   // --- Auth Routes ---
   app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;

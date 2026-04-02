@@ -64,6 +64,94 @@ interface AuditLog {
 
 // --- Components ---
 
+const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.post('/setup/init', { email, password, name });
+      onComplete();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error durante la configuración');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100"
+      >
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
+            <Settings className="text-white w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Asistente de Instalación</h1>
+          <p className="text-slate-500 mt-2">Configura tu cuenta de administrador principal</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Nombre Completo</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="Ej: Juan Pérez"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Correo Electrónico</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="admin@empresa.com"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Contraseña Maestra</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-100 active:scale-[0.98] disabled:bg-slate-300"
+          >
+            {loading ? 'Configurando...' : 'Finalizar Instalación'}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
 const Login = ({ onLogin }: { onLogin: (user: User, token: string) => void }) => {
   const [email, setEmail] = useState('admin@admin.com');
   const [password, setPassword] = useState('123456');
@@ -566,13 +654,24 @@ const POS = () => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [isSetup, setIsSetup] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
+    checkSetup();
     const savedUser = localStorage.getItem('user');
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
+
+  const checkSetup = async () => {
+    try {
+      const res = await api.get('/setup/status');
+      setIsSetup(res.data.isSetup);
+    } catch (err) {
+      console.error('Error checking setup status');
+    }
+  };
 
   const handleLogin = (user: User, token: string) => {
     localStorage.setItem('token', token);
@@ -585,6 +684,22 @@ export default function App() {
     localStorage.removeItem('user');
     setUser(null);
   };
+
+  if (isSetup === false) {
+    return <SetupWizard onComplete={() => setIsSetup(true)} />;
+  }
+
+  if (isSetup === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
 
   if (!user) return <Login onLogin={handleLogin} />;
 
