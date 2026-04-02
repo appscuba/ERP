@@ -65,17 +65,33 @@ interface AuditLog {
 // --- Components ---
 
 const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('Mi Empresa');
+  const [email, setEmail] = useState('admin@admin.com');
+  const [password, setPassword] = useState('123456');
+  const [name, setName] = useState('Super Admin');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
+
+  const nextStep = () => {
+    if (!companyName.trim()) {
+      setError('Ingresa el nombre de tu empresa');
+      return;
+    }
+    setError('');
+    setStep(2);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
     setLoading(true);
+    setError('');
     try {
-      await api.post('/setup/init', { email, password, name });
+      await api.post('/setup/init', { companyName, email, password, name });
       onComplete();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error durante la configuración');
@@ -85,69 +101,102 @@ const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100"
-      >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
-            <Settings className="text-white w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Instalación rápida ERP</h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            Asistente liviano en 2 pasos para dejar el sistema listo.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className={cn('h-2 rounded-full', step >= 1 ? 'bg-indigo-600' : 'bg-slate-200')} />
+            <div className={cn('h-2 rounded-full', step >= 2 ? 'bg-indigo-600' : 'bg-slate-200')} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Asistente de Instalación</h1>
-          <p className="text-slate-500 mt-2">Configura tu cuenta de administrador principal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Nombre Completo</label>
-            <input 
-              type="text" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="Ej: Juan Pérez"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Correo Electrónico</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="admin@empresa.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Contraseña Maestra</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Empresa</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="Ej: Distribuidora Central"
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                onClick={nextStep}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
+              >
+                Continuar
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre completo</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Correo admin</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="w-1/3 bg-slate-100 text-slate-700 font-medium py-2.5 rounded-lg"
+                >
+                  Atrás
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-2/3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold py-2.5 rounded-lg"
+                >
+                  {loading ? 'Instalando...' : 'Finalizar instalación'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {error && (
-            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
+            <div className="p-2 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
               <AlertCircle size={16} />
               {error}
             </div>
           )}
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-100 active:scale-[0.98] disabled:bg-slate-300"
-          >
-            {loading ? 'Configurando...' : 'Finalizar Instalación'}
-          </button>
         </form>
-      </motion.div>
+      </div>
     </div>
   );
 };
