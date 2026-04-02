@@ -16,6 +16,34 @@ async function startServer() {
 
   app.use(express.json());
 
+  // --- Health Check ---
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Test database connection
+      await prisma.$queryRaw`SELECT 1`;
+      const userCount = await prisma.user.count();
+      const productCount = await prisma.product.count();
+      const auditCount = await prisma.auditLog.count();
+      
+      res.json({ 
+        status: 'ok', 
+        database: 'connected',
+        stats: {
+          users: userCount,
+          products: productCount,
+          logs: auditCount
+        }
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        database: 'disconnected',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // --- Setup Routes ---
   app.get('/api/setup/status', async (req, res) => {
     try {

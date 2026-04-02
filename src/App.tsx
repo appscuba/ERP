@@ -300,7 +300,7 @@ const ChangePassword = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-const Dashboard = () => {
+const Dashboard = ({ stats }: { stats?: any }) => {
   const data = [
     { name: 'Lun', sales: 4000 },
     { name: 'Mar', sales: 3000 },
@@ -313,6 +313,29 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
+      {/* System Health Banner */}
+      {stats && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white">
+              <CheckCircle2 size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-900">Sistema Conectado Correctamente</p>
+              <p className="text-xs text-emerald-600">Base de datos verificada y operativa. {stats.users} usuarios, {stats.products} productos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            Live
+          </div>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { label: 'Ventas Hoy', value: '€1,240.00', trend: '+12.5%', icon: ArrowUpRight, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -655,14 +678,25 @@ const POS = () => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isSetup, setIsSetup] = useState<boolean | null>(null);
+  const [dbStatus, setDbStatus] = useState<{ status: string; stats?: any } | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     checkSetup();
+    checkHealth();
     const savedUser = localStorage.getItem('user');
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
+
+  const checkHealth = async () => {
+    try {
+      const res = await api.get('/health');
+      setDbStatus(res.data);
+    } catch (err) {
+      setDbStatus({ status: 'error' });
+    }
+  };
 
   const checkSetup = async () => {
     try {
@@ -809,7 +843,7 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'dashboard' && <Dashboard stats={dbStatus?.stats} />}
               {activeTab === 'inventory' && <Inventory />}
               {activeTab === 'pos' && <POS />}
               {activeTab === 'audit' && <AuditLogs />}
